@@ -1,16 +1,18 @@
+-- models/staging/stg_fact_transactions.sql
+
 WITH cleaned_transactions AS (
     SELECT
         LOWER(transaction_id) AS transaction_id,
-        CAST(amount AS DECIMAL(10, 2)) AS amount,
+        CAST(amount AS DECIMAL(10,2)) AS amount,
         LOWER(status) AS status,
         LOWER(merchant_id) AS merchant_id,
         LOWER(customer_id) AS customer_id,
         CAST(transaction_date AS DATE) AS transaction_date,
         LOWER(payment_method) AS payment_method,
         CURRENT_TIMESTAMP AS loaded_at
-    FROM 
+    FROM
         {{ source('sigma_analytics', 'fact_transactions') }}
-    WHERE 
+    WHERE
         merchant_id NOT LIKE 'TEST_%'
 )
 
@@ -18,6 +20,7 @@ SELECT * FROM cleaned_transactions
 ```
 
 ```yaml
+# models/staging/schema.yml
 version: 2
 
 models:
@@ -64,6 +67,6 @@ models:
           - accepted_values:
               values: ['credit_card', 'debit_card', 'upi']
       - name: loaded_at
-        description: "Timestamp when the data was loaded."
+        description: "Timestamp when the data was loaded into the staging table."
         tests:
           - not_null
