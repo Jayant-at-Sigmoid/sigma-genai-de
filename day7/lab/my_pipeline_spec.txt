@@ -1,0 +1,48 @@
+PIPELINE SPEC - 	
+OBJECTIVE
+Build a STREAM-based pipeline that processes the last 30 days of successful transactions, calculates customer spend and transaction frequency, and classifies customers into:
+- VIP → total_spent > 5000
+- High → 1000–5000
+- Mid → 200–999
+- Low → <200
+The final output is stored in gold_customer_segments for CRM targeting and retention analysis.
+
+DATA SOURCES	[ Source name, format, approximate row count per day ]	
+The pipeline ingests around 5 million transaction records daily from transactions_raw in CSV/Parquet format. Key fields include transaction_id, customer_id, transaction_amount, transaction_timestamp, and transaction_status. It also uses customers_dim and segment configuration datasets as lookup tables.	
+
+BRONZE LAYER	[ Columns to ingest, metadata columns to add, partition strategy ]	
+The Bronze layer ingests raw transaction files using Auto Loader/Structured Streaming and stores them in Delta Lake without transformations. Metadata columns like _ingestion_time, _source_file, and batch_id are added for audit and lineage tracking. Tables are partitioned by load_date.	
+
+SILVER LAYER	[ Exact casts, filter conditions, dedup key, quality halt threshold ]	
+The Silver layer cleans and validates the data by:
+
+- casting amounts to DECIMAL(18,2)
+- filtering failed or invalid transactions
+- removing duplicate transaction_ids
+- quarantining bad records
+
+Only valid transactions from the last 30 days are written to silver_transactions."	
+
+GOLD LAYER	[ Table name, key columns, EXACT business rule formula ]	
+The Gold layer creates gold_customer_segments by calculating 30-day spend and transaction frequency per customer. Segments are assigned using exact spend thresholds and SCD Type 2 logic preserves historical segment changes.	
+
+ERROR HANDLING	[ What happens if source file missing? What if quality check fails? ]	
+- Missing source files → retry 3 times (1 min, 5 min, 15 min)
+- Invalid records → move to /quarantine/invalid_transactions/
+- Duplicate transactions → removed using transaction_id
+- Schema mismatch → quarantined and alerted
+- Gold publishing stops if bad records exceed 5%
+- Airflow retries and Slack/email alerts handle operational failures.
+
+PERFORMANCE	[ Partitioning strategy, any joins needing broadcast hint or caching ]	
+bronze_transactions partitioned by load_date
+silver_transactions partitioned by transaction_date
+gold_customer_segments partitioned by customer_segment
+
+Performance optimizations:
+
+- Broadcast join on customers_dim (~1M rows)
+- Cache silver_transactions
+- Delta OPTIMIZE + ZORDER BY(customer_id)
+- Incremental 30-day sliding window processing
+- AQE and auto compaction enabled	

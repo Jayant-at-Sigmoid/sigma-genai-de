@@ -40,7 +40,7 @@ bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
 MODEL_ID = "amazon.nova-pro-v1:0"    # Nova Pro for structural reasoning
 OUTPUT_DIR = "pipeline_brain"
 
-PIPELINE_FILE = os.path.join(OUTPUT_DIR, "generated_pipeline.py")
+PIPELINE_FILE = os.path.join(OUTPUT_DIR, "fixed_pipeline.py")
 REVIEW_OUTPUT = os.path.join(OUTPUT_DIR, "code_review.json")
 
 # ── SYSTEM PROMPT ──────────────────────────────────────────────────────────

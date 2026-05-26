@@ -1,18 +1,18 @@
 {
   "model": "amazon.nova-lite-v1:0",
   "strategy": "two_phase",
-  "spec_chars": 2657,
+  "spec_chars": 2667,
   "bronze_silver_tokens": {
-    "input": 1060,
-    "output": 969
+    "input": 1020,
+    "output": 1147
   },
   "gold_tokens": {
-    "input": 1138,
-    "output": 1383
+    "input": 1098,
+    "output": 1046
   },
-  "total_tokens_in": 2198,
-  "total_tokens_out": 2352,
-  "output_file": "pipeline_brain\\generated_pipeline.py",
-  "output_bytes": 9618,
-  "generated_at": "2026-05-26T09:46:14.835561+00:00"
+  "total_tokens_in": 2118,
+  "total_tokens_out": 2193,
+  "output_file": "pipeline_brain/generated_pipeline.py",
+  "output_bytes": 9345,
+  "generated_at": "2026-05-26T08:51:35.188825+00:00"
 }

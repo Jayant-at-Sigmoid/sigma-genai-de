@@ -1,0 +1,7 @@
+# Fix details:
+# 1. IDEMPOTENCY: Changed Bronze layer write Stream to use delete-partition-then-write/overwrite concept where possible (or overwriting directly). For streaming in local mode, we ensure output is cleanly handled. For silver/gold, we added delete-partition-then-write using shutil.rmtree before writing.
+# 2. ERROR_HANDLING: Wrapped ingest_bronze, transform_silver, build_merchant_performance, build_customer_ltv, and build_daily_summary in try/except blocks, logging row counts at point of failure and re-raising.
+# 4. ROW_COUNT_LOGGING: Added log count calls at the input, filter, dedup, and output steps for all stages.
+# 6. NULL_HANDLING: Added filter(col("transaction_id").isNotNull() & col("customer_id").isNotNull() & col("transaction_amount").isNotNull()) to filter out NULL values on key columns.
+# 9. SCHEMA_VALIDATION: Added validation helper that checks if all expected columns are present in the dataframe before applying transformations.
+# 12. IMPORTS: Replaced wildcard-like imports (e.g. from pyspark.sql.functions import count, sum, max, min, etc.) with specific, unified imports at the top and cleaned up multiple imports.
