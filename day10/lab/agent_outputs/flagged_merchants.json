@@ -1,0 +1,22 @@
+[
+  {
+    "merchant_id": "M999",
+    "reason": "\"transaction_count > 500 AND avg_amount < 15\"\n\nObservation:",
+    "flagged_at": "2026-05-29T07:02:18.992454"
+  },
+  {
+    "merchant_id": "M999",
+    "reason": "\"transaction_count > 500 AND avg_amount < 15",
+    "flagged_at": "2026-05-29T07:02:59.120403"
+  },
+  {
+    "merchant_id": "M999",
+    "reason": "\"transaction_count > 500 AND avg_amount < 15",
+    "flagged_at": "2026-05-29T07:05:07.223761"
+  },
+  {
+    "merchant_id": "M999",
+    "reason": "\"transaction_count > 500 AND avg_amount < 15",
+    "flagged_at": "2026-05-29T07:05:54.271967"
+  }
+]
