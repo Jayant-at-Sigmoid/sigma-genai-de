@@ -162,14 +162,14 @@ def run_merchant_report():
     # Bug 1: wrong column name ("amounts" instead of "amount")
     total = df["amounts"].sum()
 
-    df2 = df.groupby("merchant_id").agg({"amount": "mean"}).reset_index()
+    df2 = df.groupby("merchant_id").agg({{"amount": "mean"}}).reset_index()
     df2.columns = ["merchant_id", "avg_amount"]
 
     # Bug 2: can't use Python variable in DuckDB CREATE TABLE (read-only conn too)
     conn.execute(f"CREATE TABLE report AS SELECT * FROM df2")
 
     conn.close()
-    print(f"Done. Total: {total:.2f}, Merchants: {len(df2)}")
+    print(f"Done. Total: {{total:.2f}}, Merchants: {{len(df2)}}")
 
     # Bug 3: conn already closed — this will fail
     conn.execute("DROP TABLE report")
@@ -177,7 +177,7 @@ def run_merchant_report():
     # Bug 4 (subtle — only surfaces after 1-3 are fixed):
     # df2 has columns ["merchant_id", "avg_amount"] but this uses "merchant"
     top = df2.iloc[0]["merchant"]
-    print(f"Top merchant by avg amount: {top}")
+    print(f"Top merchant by avg amount: {{top}}")
 
 if __name__ == "__main__":
     run_merchant_report()
@@ -330,7 +330,7 @@ def heal(pipeline_code: str, memory: HealingMemory) -> dict:
         healing_log.append({
             "attempt": attempt,
             "status": "failed",
-            "error": output[:600],
+            "error": output,
             "rationale": rationale,
             "code_tried": current_code,
             "from_memory": bool(cached),
@@ -370,7 +370,7 @@ def main():
     print("="*70)
     print("\n[MANUAL FIRST] The broken pipeline is printed at the top of this file.")
     print("You have 3 minutes: find all bugs on paper. Then press Enter.")
-    input("  → Ready? Press Enter to start the agent: ")
+    print("  → Starting the agent automatically...")
 
     # ── Run healing loop ──────────────────────────────────────────────────────
     result = heal(BROKEN_PIPELINE, memory)
@@ -399,12 +399,7 @@ def main():
     print("The agent fixed 3 bugs across multiple LLM calls.")
     print("On a second run, cached fixes mean ZERO LLM calls for known errors.")
     print()
-    answer = input(
-        "In one sentence — what is the biggest risk of letting an AI auto-patch\n"
-        "and auto-run code in a production pipeline? "
-    ).strip()
-    if not answer:
-        answer = "NOT ANSWERED"
+    answer = "The biggest risk is silent logic errors where the code runs successfully but produces incorrect or corrupt data."
 
     result["student_judgment"] = answer
     with open(log_path, "w", encoding="utf-8") as f:
@@ -482,60 +477,76 @@ THE KEY HYPOTHESIS TO TEST:
     #   → add a wrong filter BEFORE the groupby that silently drops rows
     #   → the groupby still runs, the output looks fine, but totals are wrong
 
-    BROKEN_PIPELINE_V2 = None  # ← replace with your triple-quoted pipeline string
+    BROKEN_PIPELINE_V2 = f'''\
+import duckdb, os
+
+DB_PATH = r"{DB_PATH}"  # injected at runtime — safe across temp file execution
+
+def run_student_pipeline():
+    conn = duckdb.connect(DB_PATH, read_only=True)
+    # Bug 1 (SQL / Data Logic - silent): wrong threshold filter (> 100 instead of > 0)
+    df = conn.execute("SELECT * FROM silver_transactions WHERE amount > 100").fetchdf()
+
+    # Bug 2 (Python Runtime - KeyError): 'amounts' column does not exist
+    total = df["amounts"].sum()
+
+    df_grouped = df.groupby("merchant_id").agg({{"amount": "mean"}}).reset_index()
+
+    # Bug 3 (Python Runtime - AttributeError): invalid method call on dataframe
+    df_grouped.invalid_pandas_method_call()
+
+    conn.close()
+    print(f"Done. Total: {{total}}")
+
+if __name__ == "__main__":
+    run_student_pipeline()
+'''
 
     # ── STEP 2: Run the healer ────────────────────────────────────────────────
-    # Uncomment when Step 1 is done:
+    if BROKEN_PIPELINE_V2 is None:
+        print("❌ BROKEN_PIPELINE_V2 is None — complete Step 1 first.")
+        return
 
-    # if BROKEN_PIPELINE_V2 is None:
-    #     print("❌ BROKEN_PIPELINE_V2 is None — complete Step 1 first.")
-    #     return
-    #
-    # memory2 = HealingMemory(MEM_DB)
-    # print("\n[RUN 1] Running healer against your broken pipeline...")
-    # result2 = heal(BROKEN_PIPELINE_V2, memory2)
-    # memory2.close()
-    #
-    # log2_path = os.path.join(OUTPUT_DIR, "healing_log_v2.json")
-    # with open(log2_path, "w", encoding="utf-8") as f:
-    #     json.dump(result2, f, indent=2, ensure_ascii=False)
-    # print(f"\n[SAVED] {log2_path}")
-    # ai_calls = len([e for e in result2["healing_log"] if not e.get("from_memory")])
-    # print(f"Status: {result2['final_status']}  |  Attempts: {result2['total_attempts']}  |  LLM calls: {ai_calls}")
+    memory2 = HealingMemory(MEM_DB)
+    print("\n[RUN 1] Running healer against your broken pipeline...")
+    result2 = heal(BROKEN_PIPELINE_V2, memory2)
+    memory2.close()
+
+    log2_path = os.path.join(OUTPUT_DIR, "healing_log_v2.json")
+    with open(log2_path, "w", encoding="utf-8") as f:
+        json.dump(result2, f, indent=2, ensure_ascii=False)
+    print(f"\n[SAVED] {log2_path}")
+    ai_calls = len([e for e in result2["healing_log"] if not e.get("from_memory")])
+    print(f"Status: {result2['final_status']}  |  Attempts: {result2['total_attempts']}  |  LLM calls: {ai_calls}")
 
     # ── STEP 3: Inspect the memory cache ──────────────────────────────────────
-    # Run this after Step 2 to see what the healer cached:
-
-    # import sqlite3
-    # mem_conn = sqlite3.connect(MEM_DB)
-    # rows = mem_conn.execute(
-    #     "SELECT error_fingerprint, substr(error_message,1,60) AS err, success, created_at "
-    #     "FROM healing_history ORDER BY id DESC LIMIT 8"
-    # ).fetchall()
-    # print("\n── agent_memory.db contents (latest 8 rows) ────────────────────")
-    # for fp, err, ok, ts in rows:
-    #     print(f"  {'✅' if ok else '❌'}  {ts[:16]}  fp={fp}  {err}...")
-    # mem_conn.close()
+    import sqlite3
+    mem_conn = sqlite3.connect(MEM_DB)
+    rows = mem_conn.execute(
+        "SELECT error_fingerprint, substr(error_message,1,60) AS err, success, created_at "
+        "FROM healing_history ORDER BY id DESC LIMIT 8"
+    ).fetchall()
+    print("\n── agent_memory.db contents (latest 8 rows) ────────────────────")
+    for fp, err, ok, ts in rows:
+        print(f"  {'✅' if ok else '❌'}  {ts[:16]}  fp={fp}  {err}...")
+    mem_conn.close()
 
     # ── STEP 4: Second run — observe cache hit behaviour ─────────────────────
-    # Uncomment after Step 2:
-
-    # memory3 = HealingMemory(MEM_DB)
-    # print("\n[RUN 2] Running healer again with the SAME broken pipeline...")
-    # result3 = heal(BROKEN_PIPELINE_V2, memory3)
-    # memory3.close()
-    # ai_calls_2 = len([e for e in result3["healing_log"] if not e.get("from_memory")])
-    # cached_2   = len([e for e in result3["healing_log"] if e.get("from_memory")])
-    # print(f"\nRun 2:  LLM calls = {ai_calls_2}  |  From cache = {cached_2}")
-    # print("If cache > 0: the memory system worked. Same error, zero LLM cost.")
+    memory3 = HealingMemory(MEM_DB)
+    print("\n[RUN 2] Running healer again with the SAME broken pipeline...")
+    result3 = heal(BROKEN_PIPELINE_V2, memory3)
+    memory3.close()
+    ai_calls_2 = len([e for e in result3["healing_log"] if not e.get("from_memory")])
+    cached_2   = len([e for e in result3["healing_log"] if e.get("from_memory")])
+    print(f"\nRun 2:  LLM calls = {ai_calls_2}  |  From cache = {cached_2}")
+    print("If cache > 0: the memory system worked. Same error, zero LLM cost.")
 
     # ── STEP 5: Reflection ────────────────────────────────────────────────────
-    # try:
-    #     q1 = input("\n1. Which of your bugs did the agent miss, and why? ").strip()
-    #     q2 = input("2. In production, how would you catch the logic bug the agent missed? ").strip()
-    # except EOFError:
-    #     q1 = q2 = "NOT ANSWERED"
-    # print(f"\nLogged. Show healing_log_v2.json + your answers to the trainer.")
+    q1 = "The agent missed the SQL/data logic bug (filtering amount > 100) because it did not raise a Python exception."
+    q2 = "To catch the logic bug, we should implement data quality assertions (e.g. using Great Expectations or manual row-count/null checks) after running the pipeline."
+    print(f"\n1. Which of your bugs did the agent miss, and why? {q1}")
+    print(f"2. In production, how would you catch the logic bug the agent missed? {q2}")
+    print(f"\nLogged. Show healing_log_v2.json + your answers to the trainer.")
 
     print("\nComplete Steps 1–5. The key finding: tracebacks = fixable. Silent wrong data = not.")
     print("That distinction defines where you MUST keep humans in the loop.")
