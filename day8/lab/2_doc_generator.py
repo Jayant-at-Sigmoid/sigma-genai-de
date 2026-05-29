@@ -226,12 +226,12 @@ PIPELINE SOURCE:
 Return ONLY the Markdown content. No preamble. No code fences."""
 
     print("\n[Bedrock] Step 2: Generating Confluence runbook...")
-    print(f"          Model: {MODEL_ID_PRO}")
+    print(f"Model: {MODEL_ID_PRO}")
 
     runbook, usage = call_bedrock(MODEL_ID_PRO, system, user, max_tokens=4000)
     runbook = strip_fences(runbook, "markdown")
 
-    print(f"          Done. Tokens: {usage['inputTokens']} in / {usage['outputTokens']} out")
+    print(f"Done. Tokens: {usage['inputTokens']} in / {usage['outputTokens']} out")
     return runbook, usage
 
 

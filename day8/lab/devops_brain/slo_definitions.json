@@ -6,13 +6,13 @@
   },
   "data_freshness_slo": {
     "threshold_hours": 24,
-    "reasoning": "To ensure the dashboard has the most recent data from the previous day's transactions.",
-    "breach_impact": "Stale data leads to incorrect financial reports affecting merchant decisions."
+    "reasoning": "To ensure data is up-to-date for the morning dashboard at 08:00 IST.",
+    "breach_impact": "Stale data leads to incorrect financial reports for merchants."
   },
   "quality_threshold_slo": {
     "threshold_pct": 99.9,
     "reasoning": "To maintain high data quality for accurate financial analysis.",
-    "breach_impact": "Low-quality data results in erroneous financial reports and potential compliance issues."
+    "breach_impact": "Low-quality data results in erroneous financial insights."
   },
   "row_count_slo": {
     "min_rows": 17,
@@ -23,6 +23,6 @@
   "pipeline_runtime_slo": {
     "threshold_minutes": 120,
     "reasoning": "To allow sufficient time for data processing before the morning dashboard update.",
-    "breach_impact": "Exceeding runtime delays the dashboard update, causing delays in financial reporting."
+    "breach_impact": "Exceeding runtime delays the dashboard update, impacting timely decision-making."
   }
 }

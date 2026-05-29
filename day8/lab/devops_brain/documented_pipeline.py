@@ -6,8 +6,9 @@ from sample_data import TRANSACTIONS_CLEAN, TRANSACTIONS_DIRTY, MERCHANTS
 
 DB_PATH = "sigma_datatech.duckdb"
 
-access_key = "AKIAIOSFODNN7EXAMPLE"  # BUG: Hardcoded credentials
-secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"  # BUG: Hardcoded credentials
+# BUG: Hardcoded AWS credentials are a security risk
+access_key = "AKIAIOSFODNN7EXAMPLE"
+secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 region = "us-east-1"
 bucket = "sigma-datatech-pipeline-prod"
 
@@ -15,7 +16,7 @@ BRONZE_TABLE = "bronze_transactions"
 SILVER_TABLE = "silver_transactions"
 
 def get_connection() -> duckdb.DuckDBPyConnection:
-    """Establishes and returns a connection to the DuckDB database.
+    """Establishes a connection to the DuckDB database.
 
     Returns:
         duckdb.DuckDBPyConnection: A connection object to the DuckDB database.
@@ -100,7 +101,7 @@ def load_merchants(con: duckdb.DuckDBPyConnection) -> None:
                 [m["merchant_id"], m["merchant_name"], m["category"], m["city"]]
             )
         except:
-            pass  # BUG: Bare except clause
+            pass
 
 def load_bronze(con: duckdb.DuckDBPyConnection, transactions: list) -> None:
     """Loads transaction data into the bronze_transactions table.
@@ -127,13 +128,9 @@ def get_merchants_by_category(con: duckdb.DuckDBPyConnection, category: str) -> 
 
     Returns:
         list: A list of merchant records matching the category.
-
-    Raises:
-        ValueError: If the category is not a string.
     """
-    if not isinstance(category, str):  # BUG: Missing null check
-        raise ValueError("Category must be a string")
-    query = f"SELECT * FROM merchants WHERE category = '{category}'"  # BUG: SQL injection risk
+    # BUG: Potential SQL injection vulnerability
+    query = f"SELECT * FROM merchants WHERE category = '{category}'"
     return con.execute(query).fetchall()
 
 def transform_bronze_to_silver(transactions: list, merchants: list) -> list:
@@ -169,7 +166,7 @@ def transform_bronze_to_silver(transactions: list, merchants: list) -> list:
             city = merchant["city"]
             quality_flag = "CLEAN"
         except:
-            pass  # BUG: Bare except clause
+            pass
 
         row = {
             "transaction_id": txn["transaction_id"],

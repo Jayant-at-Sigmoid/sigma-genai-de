@@ -12,6 +12,7 @@ import os
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
 
+# pyrefly: ignore [missing-import]
 import duckdb
 from sample_data import (
     TRANSACTIONS_CLEAN,

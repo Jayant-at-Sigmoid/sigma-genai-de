@@ -1,34 +1,35 @@
 # Data Pipeline Design Document
 
 ## What This Pipeline Does
-This pipeline ingests transaction data from both clean and dirty sources, processes it, and stores it in three layers: Bronze, Silver, and Gold. The Bronze layer stores raw data, the Silver layer stores cleaned and enriched data, and the Gold layer stores aggregated metrics.
+This pipeline ingests transaction data, cleans it, enriches it with merchant information, and then aggregates it into merchant performance metrics and daily summaries.
 
 ## Data Flow Diagram
 
-```
-+----------------+      +--------------------+      +--------------------+      +--------------------+
-| TRANSACTIONS   | ---> | bronze_transactions| ---> | silver_transactions| ---> | gold_merchant_perf |
-| (Clean & Dirty)|      |                    |      |                    |      |                    |
-+----------------+      +--------------------+      +--------------------+      +--------------------+
-                                                                                     |
-                                                                                 +--------------------+
-                                                                                 | gold_daily_summary  |
-                                                                                 +--------------------+
+```plaintext
++--------------------+     +--------------------+     +--------------------+     +--------------------+
+|  Source            |     |  Bronze Layer       |     |  Silver Layer       |     |  Gold Layer         |
+|  (TRANSACTIONS)    |     |  (bronze_transactions) |     |  (silver_transactions) |     |  (gold_merchant_performance,  |
+|                    |     |                       |     |                     |     |  gold_daily_summary) |
++--------------------+     +--------------------+     +--------------------+     +--------------------+
+|                    |     |                     |     |                     |     |                    |
+| Load Transactions  | --> | Clean & Enrich      | --> | Aggregate Metrics  | --> | Store Processed    |
+|                    |     |                     |     |                     |     | Data               |
++--------------------+     +--------------------+     +--------------------+     +--------------------+
 ```
 
 ## Key Design Decisions
-- **Layered Approach**: The pipeline uses a three-tier architecture (Bronze, Silver, Gold) to separate raw data, cleaned data, and aggregated metrics.
-- **Data Enrichment**: The Silver layer enriches transaction data by joining it with merchant information, making it more useful for analysis.
-- **Aggregation**: The Gold layer computes metrics like merchant performance and daily summaries, providing valuable insights.
-- **Data Quality Flags**: The Silver layer includes quality flags to distinguish between clean and potentially problematic data.
+- **Layered Approach**: The pipeline uses a three-layer approach (Bronze, Silver, Gold) to ensure data is progressively enriched and aggregated.
+- **Data Quality Flags**: The Silver layer includes a quality flag to distinguish between clean and dirty data.
+- **Aggregative Metrics**: The Gold layer computes both merchant-specific and daily summary metrics for analytical purposes.
+- **DuckDB**: Utilized for its lightweight and efficient in-memory database capabilities.
 
 ## Known Limitations
-- **Data Duplication**: The pipeline does not handle duplicate transactions within a single run.
-- **Limited Error Handling**: The pipeline has minimal error handling, which could be improved for robustness.
-- **Single-Run Processing**: The pipeline processes all transactions in a single run, which may not be suitable for very large datasets.
-- **Static Merchant Data**: Merchant data is loaded once and not updated unless the pipeline is rerun.
+- **Data Volume**: The pipeline is not optimized for extremely large datasets; performance may degrade with very high volumes.
+- **Single Source**: Currently designed to work with a single source of transactions; extending to multiple sources would require changes.
+- **Static Merchant Data**: Merchant data is loaded once; changes in merchant information are not dynamically updated.
+- **Failure Handling**: The pipeline does not currently handle retry logic for failed transactions or database operations.
 
 ## Dependencies
-- **DuckDB**: The pipeline uses DuckDB for data storage and processing.
-- **MERCHANTS**: A list of merchant data used for enriching transactions.
-- **TRANSACTIONS_CLEAN and TRANSACTIONS_DIRTY**: Lists of clean and dirty transaction data, respectively.
+- **DuckDB**: The database engine used for storing and querying data.
+- **MERCHANTS**: A predefined list of merchant information used for enriching transaction data.
+- **TRANSACTIONS_CLEAN and TRANSACTIONS_DIRTY**: Source data files containing transaction records.

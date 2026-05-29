@@ -58,6 +58,7 @@ SCRIPT_DIR      = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR      = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "output"))
 COMPETITIVE_DIR = OUTPUT_DIR   # all sprint outputs go to labs/output/
 CHALLENGE_PATH  = os.path.join(SCRIPT_DIR, "challenge_pipeline.py")
+DEVOPS_BRAIN_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "..", "day8", "lab", "devops_brain"))
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -476,7 +477,7 @@ into the test file so it runs without any imports from challenge_pipeline.
     # Run pytest
     try:
         proc = subprocess.run(
-            [sys.executable, "-m", "pytest", test_file, "-v", "--tb=short", "--no-header", "-q"],
+            [sys.executable, "-m", "pytest", test_file, "-v", "--tb=short", "--no-header"],
             capture_output=True, text=True, timeout=30,
             cwd=SCRIPT_DIR,
         )
@@ -498,7 +499,8 @@ into the test file so it runs without any imports from challenge_pipeline.
             "check": "testing",
             "test_file": test_file,
             "tests_ran": ran,
-            "passed": passed_count,
+            "passed": passed,
+            "passed_count": passed_count,
             "failed": failed_count,
             "errors": error_count,
             "pass_threshold": 2,
@@ -512,7 +514,8 @@ into the test file so it runs without any imports from challenge_pipeline.
             "check": "testing",
             "test_file": test_file,
             "tests_ran": 0,
-            "passed": 0,
+            "passed": False,
+            "passed_count": 0,
             "failed": 0,
             "errors": 1,
             "pass_threshold": 2,
@@ -526,7 +529,8 @@ into the test file so it runs without any imports from challenge_pipeline.
             "check": "testing",
             "test_file": "",
             "tests_ran": 0,
-            "passed": 0,
+            "passed": False,
+            "passed_count": 0,
             "failed": 0,
             "errors": 1,
             "pass_threshold": 2,
@@ -690,7 +694,7 @@ def print_scorecard(checks: list) -> int:
         print(f"\n  {yellow(bold('CONDITIONAL SHIP'))}  Fix the red items above before merging.")
     else:
         verdict = "DOESN'T SHIP"
-        print(f"\n  {red(bold('DOESN\'T SHIP ✗'))}  Too many failures. This PR is not ready.")
+        print(f"\n  {red(bold('DOESNT SHIP ✗'))}  Too many failures. This PR is not ready.")
 
     print("=" * 68)
     return score, verdict

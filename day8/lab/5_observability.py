@@ -81,11 +81,17 @@ except ImportError:
     print("[ERROR] pandas not installed. Run: pip install pandas")
     sys.exit(1)
 
-# Evidently import — graceful fallback if not installed
-try:
-    from evidently.report import Report
-    from evidently.metrics import DatasetSummaryMetric, DatasetMissingValuesMetric
-    from evidently.metric_preset import DataDriftPreset
+    try:
+        # pyrefly: ignore [missing-import]
+        from evidently.report import Report
+        # pyrefly: ignore [missing-import]
+        from evidently.metrics import DatasetSummaryMetric, DatasetMissingValuesMetric
+        # pyrefly: ignore [missing-import]
+        from evidently.metric_preset import DataDriftPreset
+    except ImportError:
+        from evidently.legacy.report import Report
+        from evidently.legacy.metrics import DatasetSummaryMetric, DatasetMissingValuesMetric
+        from evidently.legacy.metric_preset import DataDriftPreset
     EVIDENTLY_AVAILABLE = True
 except ImportError:
     EVIDENTLY_AVAILABLE = False
