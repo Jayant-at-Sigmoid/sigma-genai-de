@@ -1,0 +1,35 @@
+{
+  "file": "queries/revenue_by_merchant.sql",
+  "reviewed_at": "2026-05-25T15:41:10.867061",
+  "issues_found": 3,
+  "review": {
+    "issues": [
+      {
+        "severity": "Critical",
+        "category": "Correctness",
+        "title": "Missing filter for completed transactions",
+        "line": "SELECT clause",
+        "problem": "The query does not filter transactions by status 'COMPLETED' to calculate revenue.",
+        "fix": "ADD WHERE t.status = 'COMPLETED'"
+      },
+      {
+        "severity": "Medium",
+        "category": "Performance",
+        "title": "Implicit join syntax",
+        "line": "FROM clause",
+        "problem": "Using implicit join syntax can lead to less readable and potentially confusing queries.",
+        "fix": "USE explicit JOIN syntax"
+      },
+      {
+        "severity": "Low",
+        "category": "Readability",
+        "title": "Lack of comments",
+        "line": "Entire query",
+        "problem": "The query lacks comments explaining the purpose and logic.",
+        "fix": "ADD comments to explain the purpose and logic"
+      }
+    ],
+    "corrected_sql": "SELECT m.merchant_name, SUM(t.amount) as total_revenue, COUNT(*) as txn_count FROM fact_transactions t JOIN dim_merchant m ON t.merchant_id = m.merchant_id WHERE t.transaction_date > '2024-01-01' AND t.status = 'COMPLETED' GROUP BY m.merchant_name ORDER BY total_revenue LIMIT 10;",
+    "summary": "The query has a critical correctness issue by not filtering for completed transactions. It also uses implicit join syntax and lacks comments, which could be improved for readability."
+  }
+}

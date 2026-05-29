@@ -1,0 +1,35 @@
+{
+  "file": "queries/customer_spend.sql",
+  "reviewed_at": "2026-05-25T15:40:44.142856",
+  "issues_found": 3,
+  "review": {
+    "issues": [
+      {
+        "severity": "Critical",
+        "category": "Correctness",
+        "title": "Missing filter on transaction status",
+        "line": "WHERE t.status = 'COMPLETED'",
+        "problem": "The query does not filter transactions by status correctly as per the business rule.",
+        "fix": "WHERE t.status = 'COMPLETED'"
+      },
+      {
+        "severity": "Medium",
+        "category": "Correctness",
+        "title": "Incorrect aggregation",
+        "line": "SUM(t.amount) as lifetime_value, COUNT(t.transaction_id) as total_orders",
+        "problem": "The query calculates lifetime value and total orders without considering the status of the transaction.",
+        "fix": "SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value, COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders"
+      },
+      {
+        "severity": "Low",
+        "category": "Readability",
+        "title": "Lack of comments",
+        "line": "Entire query",
+        "problem": "The query lacks comments explaining the purpose and logic of the query.",
+        "fix": "-- Calculate customer lifetime value and total completed orders\nSELECT c.customer_name, c.email, c.tier,\n       SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value,\n       COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders\nFROM dim_customer c\nLEFT JOIN fact_transactions t ON c.customer_id = t.customer_id\nGROUP BY c.customer_name, c.email\nHAVING SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) > 1000\nORDER BY lifetime_value DESC;"
+      }
+    ],
+    "corrected_sql": "-- Calculate customer lifetime value and total completed orders\nSELECT c.customer_name, c.email, c.tier,\n       SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value,\n       COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders\nFROM dim_customer c\nLEFT JOIN fact_transactions t ON c.customer_id = t.customer_id\nGROUP BY c.customer_name, c.email\nHAVING SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) > 1000\nORDER BY lifetime_value DESC;",
+    "summary": "The query had issues with filtering transaction status and calculating lifetime value correctly. Comments were also added for readability."
+  }
+}

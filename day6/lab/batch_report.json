@@ -1,0 +1,148 @@
+{
+  "directory": "queries/",
+  "reviewed_at": "2026-05-25T15:41:10.869171",
+  "files_reviewed": 4,
+  "total_issues": 12,
+  "files": [
+    {
+      "file": "queries/customer_spend.sql",
+      "reviewed_at": "2026-05-25T15:40:44.142856",
+      "issues_found": 3,
+      "review": {
+        "issues": [
+          {
+            "severity": "Critical",
+            "category": "Correctness",
+            "title": "Missing filter on transaction status",
+            "line": "WHERE t.status = 'COMPLETED'",
+            "problem": "The query does not filter transactions by status correctly as per the business rule.",
+            "fix": "WHERE t.status = 'COMPLETED'"
+          },
+          {
+            "severity": "Medium",
+            "category": "Correctness",
+            "title": "Incorrect aggregation",
+            "line": "SUM(t.amount) as lifetime_value, COUNT(t.transaction_id) as total_orders",
+            "problem": "The query calculates lifetime value and total orders without considering the status of the transaction.",
+            "fix": "SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value, COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders"
+          },
+          {
+            "severity": "Low",
+            "category": "Readability",
+            "title": "Lack of comments",
+            "line": "Entire query",
+            "problem": "The query lacks comments explaining the purpose and logic of the query.",
+            "fix": "-- Calculate customer lifetime value and total completed orders\nSELECT c.customer_name, c.email, c.tier,\n       SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value,\n       COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders\nFROM dim_customer c\nLEFT JOIN fact_transactions t ON c.customer_id = t.customer_id\nGROUP BY c.customer_name, c.email\nHAVING SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) > 1000\nORDER BY lifetime_value DESC;"
+          }
+        ],
+        "corrected_sql": "-- Calculate customer lifetime value and total completed orders\nSELECT c.customer_name, c.email, c.tier,\n       SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) as lifetime_value,\n       COUNT(CASE WHEN t.status = 'COMPLETED' THEN t.transaction_id END) as total_orders\nFROM dim_customer c\nLEFT JOIN fact_transactions t ON c.customer_id = t.customer_id\nGROUP BY c.customer_name, c.email\nHAVING SUM(CASE WHEN t.status = 'COMPLETED' THEN t.amount ELSE 0 END) > 1000\nORDER BY lifetime_value DESC;",
+        "summary": "The query had issues with filtering transaction status and calculating lifetime value correctly. Comments were also added for readability."
+      }
+    },
+    {
+      "file": "queries/daily_failure_rate.sql",
+      "reviewed_at": "2026-05-25T15:40:52.606898",
+      "issues_found": 3,
+      "review": {
+        "issues": [
+          {
+            "severity": "Critical",
+            "category": "Correctness",
+            "title": "Incorrect calculation of failure rate",
+            "line": "failed_count / total_count * 100 as failure_rate",
+            "problem": "The failure rate is being calculated incorrectly because failed_count is not defined in the SELECT clause but is used in the calculation.",
+            "fix": "failed_count / total_count * 100 as failure_rate"
+          },
+          {
+            "severity": "Medium",
+            "category": "Performance",
+            "title": "Correlated subquery",
+            "line": "SELECT COUNT(*) FROM fact_transactions f2 WHERE f2.status = 'FAILED' AND f2.transaction_date = t.transaction_date",
+            "problem": "The correlated subquery can be inefficient as it runs for each row in the outer query.",
+            "fix": "Use a JOIN to avoid correlated subquery."
+          },
+          {
+            "severity": "Low",
+            "category": "Readability",
+            "title": "Lack of comments",
+            "line": "Entire query",
+            "problem": "The query lacks comments explaining the logic, which can make it harder to understand for other developers.",
+            "fix": "Add comments to explain the logic of the query."
+          }
+        ],
+        "corrected_sql": "WITH failed_transactions AS (\n  SELECT transaction_date, COUNT(*) as failed_count\n  FROM fact_transactions\n  WHERE status = 'FAILED'\n  GROUP BY transaction_date\n),\ntotal_transactions AS (\n  SELECT transaction_date, COUNT(*) as total_count\n  FROM fact_transactions\n  GROUP BY transaction_date\n)\nSELECT t.transaction_date,\n       ft.failed_count,\n       tt.total_count,\n       (ft.failed_count::DECIMAL / tt.total_count) * 100 as failure_rate\nFROM total_transactions tt\nJOIN failed_transactions ft ON tt.transaction_date = ft.transaction_date\nORDER BY t.transaction_date;",
+        "summary": "The query had a critical correctness issue with the failure rate calculation and a performance issue with a correlated subquery. Readability was also improved by adding comments."
+      }
+    },
+    {
+      "file": "queries/my_query.sql",
+      "reviewed_at": "2026-05-25T15:41:05.537038",
+      "issues_found": 3,
+      "review": {
+        "issues": [
+          {
+            "severity": "Critical",
+            "category": "Correctness",
+            "title": "Incorrect revenue calculation",
+            "line": "WHERE status!= 'FAILED'",
+            "problem": "The query is not filtering transactions by 'COMPLETED' status as per the business rule.",
+            "fix": "WHERE status = 'COMPLETED'"
+          },
+          {
+            "severity": "Medium",
+            "category": "Readability",
+            "title": "Lack of comments",
+            "line": "Entire query",
+            "problem": "The query lacks comments explaining its purpose and logic.",
+            "fix": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, email, SUM(amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nWHERE status = 'COMPLETED'\nGROUP BY c.tier, email\nHAVING total_spend > 5000;"
+          },
+          {
+            "severity": "Medium",
+            "category": "Readability",
+            "title": "Missing join with dim_merchant",
+            "line": "Entire query",
+            "problem": "The query should join with dim_merchant to get merchant names instead of showing merchant IDs.",
+            "fix": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, c.email, SUM(t.amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nJOIN dim_merchant m ON t.merchant_id = m.merchant_id\nWHERE t.status = 'COMPLETED'\nGROUP BY c.tier, c.email\nHAVING total_spend > 5000;"
+          }
+        ],
+        "corrected_sql": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, c.email, SUM(t.amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nJOIN dim_merchant m ON t.merchant_id = m.merchant_id\nWHERE t.status = 'COMPLETED'\nGROUP BY c.tier, c.email\nHAVING total_spend > 5000;",
+        "summary": "The query had a critical correctness issue with the status filter and lacked comments and a join with dim_merchant for readability."
+      }
+    },
+    {
+      "file": "queries/revenue_by_merchant.sql",
+      "reviewed_at": "2026-05-25T15:41:10.867061",
+      "issues_found": 3,
+      "review": {
+        "issues": [
+          {
+            "severity": "Critical",
+            "category": "Correctness",
+            "title": "Missing filter for completed transactions",
+            "line": "SELECT clause",
+            "problem": "The query does not filter transactions by status 'COMPLETED' to calculate revenue.",
+            "fix": "ADD WHERE t.status = 'COMPLETED'"
+          },
+          {
+            "severity": "Medium",
+            "category": "Performance",
+            "title": "Implicit join syntax",
+            "line": "FROM clause",
+            "problem": "Using implicit join syntax can lead to less readable and potentially confusing queries.",
+            "fix": "USE explicit JOIN syntax"
+          },
+          {
+            "severity": "Low",
+            "category": "Readability",
+            "title": "Lack of comments",
+            "line": "Entire query",
+            "problem": "The query lacks comments explaining the purpose and logic.",
+            "fix": "ADD comments to explain the purpose and logic"
+          }
+        ],
+        "corrected_sql": "SELECT m.merchant_name, SUM(t.amount) as total_revenue, COUNT(*) as txn_count FROM fact_transactions t JOIN dim_merchant m ON t.merchant_id = m.merchant_id WHERE t.transaction_date > '2024-01-01' AND t.status = 'COMPLETED' GROUP BY m.merchant_name ORDER BY total_revenue LIMIT 10;",
+        "summary": "The query has a critical correctness issue by not filtering for completed transactions. It also uses implicit join syntax and lacks comments, which could be improved for readability."
+      }
+    }
+  ]
+}

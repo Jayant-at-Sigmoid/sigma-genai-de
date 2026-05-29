@@ -1,0 +1,35 @@
+{
+  "file": "queries/daily_failure_rate.sql",
+  "reviewed_at": "2026-05-25T15:40:52.606898",
+  "issues_found": 3,
+  "review": {
+    "issues": [
+      {
+        "severity": "Critical",
+        "category": "Correctness",
+        "title": "Incorrect calculation of failure rate",
+        "line": "failed_count / total_count * 100 as failure_rate",
+        "problem": "The failure rate is being calculated incorrectly because failed_count is not defined in the SELECT clause but is used in the calculation.",
+        "fix": "failed_count / total_count * 100 as failure_rate"
+      },
+      {
+        "severity": "Medium",
+        "category": "Performance",
+        "title": "Correlated subquery",
+        "line": "SELECT COUNT(*) FROM fact_transactions f2 WHERE f2.status = 'FAILED' AND f2.transaction_date = t.transaction_date",
+        "problem": "The correlated subquery can be inefficient as it runs for each row in the outer query.",
+        "fix": "Use a JOIN to avoid correlated subquery."
+      },
+      {
+        "severity": "Low",
+        "category": "Readability",
+        "title": "Lack of comments",
+        "line": "Entire query",
+        "problem": "The query lacks comments explaining the logic, which can make it harder to understand for other developers.",
+        "fix": "Add comments to explain the logic of the query."
+      }
+    ],
+    "corrected_sql": "WITH failed_transactions AS (\n  SELECT transaction_date, COUNT(*) as failed_count\n  FROM fact_transactions\n  WHERE status = 'FAILED'\n  GROUP BY transaction_date\n),\ntotal_transactions AS (\n  SELECT transaction_date, COUNT(*) as total_count\n  FROM fact_transactions\n  GROUP BY transaction_date\n)\nSELECT t.transaction_date,\n       ft.failed_count,\n       tt.total_count,\n       (ft.failed_count::DECIMAL / tt.total_count) * 100 as failure_rate\nFROM total_transactions tt\nJOIN failed_transactions ft ON tt.transaction_date = ft.transaction_date\nORDER BY t.transaction_date;",
+    "summary": "The query had a critical correctness issue with the failure rate calculation and a performance issue with a correlated subquery. Readability was also improved by adding comments."
+  }
+}

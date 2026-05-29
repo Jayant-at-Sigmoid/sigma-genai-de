@@ -1,0 +1,35 @@
+{
+  "file": "queries/my_query.sql",
+  "reviewed_at": "2026-05-25T15:41:05.537038",
+  "issues_found": 3,
+  "review": {
+    "issues": [
+      {
+        "severity": "Critical",
+        "category": "Correctness",
+        "title": "Incorrect revenue calculation",
+        "line": "WHERE status!= 'FAILED'",
+        "problem": "The query is not filtering transactions by 'COMPLETED' status as per the business rule.",
+        "fix": "WHERE status = 'COMPLETED'"
+      },
+      {
+        "severity": "Medium",
+        "category": "Readability",
+        "title": "Lack of comments",
+        "line": "Entire query",
+        "problem": "The query lacks comments explaining its purpose and logic.",
+        "fix": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, email, SUM(amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nWHERE status = 'COMPLETED'\nGROUP BY c.tier, email\nHAVING total_spend > 5000;"
+      },
+      {
+        "severity": "Medium",
+        "category": "Readability",
+        "title": "Missing join with dim_merchant",
+        "line": "Entire query",
+        "problem": "The query should join with dim_merchant to get merchant names instead of showing merchant IDs.",
+        "fix": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, c.email, SUM(t.amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nJOIN dim_merchant m ON t.merchant_id = m.merchant_id\nWHERE t.status = 'COMPLETED'\nGROUP BY c.tier, c.email\nHAVING total_spend > 5000;"
+      }
+    ],
+    "corrected_sql": "-- Query to find top spenders by customer tier for dashboard integration\nSELECT c.tier, c.email, SUM(t.amount) AS total_spend\nFROM dim_customer c\nJOIN fact_transactions t ON c.customer_id = t.customer_id\nJOIN dim_merchant m ON t.merchant_id = m.merchant_id\nWHERE t.status = 'COMPLETED'\nGROUP BY c.tier, c.email\nHAVING total_spend > 5000;",
+    "summary": "The query had a critical correctness issue with the status filter and lacked comments and a join with dim_merchant for readability."
+  }
+}
